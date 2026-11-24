@@ -3,6 +3,7 @@ import { executionsApi } from '../api'
 import type { TestExecution } from '../types/domain'
 import TopBar from '../components/TopBar'
 import StatusPill from '../components/StatusPill'
+import { useLanguage } from '../i18n'
 
 export default function ISTListScreen({
   onBack,
@@ -11,6 +12,7 @@ export default function ISTListScreen({
   onBack: () => void
   onSelect: (e: TestExecution) => void
 }) {
+  const { t, lang } = useLanguage()
   const [executions, setExecutions] = useState<TestExecution[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -18,21 +20,23 @@ export default function ISTListScreen({
   useEffect(() => {
     executionsApi.list({ test_type: 'IST' })
       .then(setExecutions)
-      .catch(() => setError('No se pudo cargar las pruebas IST.'))
+      .catch(() => setError(t('istList.error')))
       .finally(() => setLoading(false))
   }, [])
 
+  const dateLocale = lang === 'en' ? 'en-US' : 'es-CL'
+
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
-      <TopBar title="IST – Pruebas programadas" onBack={onBack} />
+      <TopBar title={t('istList.topBarTitle')} onBack={onBack} />
 
       <div className="flex-1 overflow-y-auto px-4 py-4 pb-6">
         {loading ? (
-          <p className="pt-8 text-center text-sm text-muted">Cargando pruebas IST…</p>
+          <p className="pt-8 text-center text-sm text-muted">{t('istList.loading')}</p>
         ) : error ? (
           <p className="pt-8 text-center text-sm text-rose-soft">{error}</p>
         ) : executions.length === 0 ? (
-          <p className="pt-8 text-center text-sm text-muted">No hay pruebas IST programadas.</p>
+          <p className="pt-8 text-center text-sm text-muted">{t('istList.noTests')}</p>
         ) : (
           <ul className="flex flex-col gap-3">
             {executions.map((e) => (
@@ -49,13 +53,13 @@ export default function ISTListScreen({
                     <p className="text-sm font-medium text-text1">{e.ist_protocol_id}</p>
                   )}
                   <p className="text-xs text-muted">
-                    {new Date(e.planned_date).toLocaleDateString('es-CL', {
+                    {new Date(e.planned_date).toLocaleDateString(dateLocale, {
                       day: '2-digit', month: 'long', year: 'numeric',
                     })}
                   </p>
                   <div className="flex items-center justify-between text-xs text-muted">
-                    <span>Resultado: {e.result}</span>
-                    <span>{e.answers.length} ítems</span>
+                    <span>{t('istList.result')}{e.result}</span>
+                    <span>{e.answers.length} {t('istList.items')}</span>
                   </div>
                 </button>
               </li>

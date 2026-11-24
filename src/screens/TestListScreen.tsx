@@ -3,6 +3,7 @@ import { executionsApi } from '../api'
 import type { Asset, TestExecution } from '../types/domain'
 import TopBar from '../components/TopBar'
 import StatusPill from '../components/StatusPill'
+import { useLanguage } from '../i18n'
 
 export default function TestListScreen({
   testType,
@@ -15,6 +16,7 @@ export default function TestListScreen({
   onBack: () => void
   onSelect: (e: TestExecution) => void
 }) {
+  const { t, lang } = useLanguage()
   const [executions, setExecutions] = useState<TestExecution[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -22,9 +24,11 @@ export default function TestListScreen({
   useEffect(() => {
     executionsApi.list({ asset_id: asset.asset_id, test_type: testType })
       .then(setExecutions)
-      .catch(() => setError('No se pudo cargar las pruebas.'))
+      .catch(() => setError(t('testList.error')))
       .finally(() => setLoading(false))
   }, [asset.asset_id, testType])
+
+  const dateLocale = lang === 'en' ? 'en-US' : 'es-CL'
 
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
@@ -32,12 +36,12 @@ export default function TestListScreen({
 
       <div className="flex-1 overflow-y-auto px-4 py-4 pb-6">
         {loading ? (
-          <p className="pt-8 text-center text-sm text-muted">Cargando pruebas…</p>
+          <p className="pt-8 text-center text-sm text-muted">{t('testList.loading')}</p>
         ) : error ? (
           <p className="pt-8 text-center text-sm text-rose-soft">{error}</p>
         ) : executions.length === 0 ? (
           <div className="pt-8 text-center">
-            <p className="text-sm text-muted">No hay pruebas {testType} programadas para este activo.</p>
+            <p className="text-sm text-muted">{t('testList.noTests', { testType })}</p>
           </div>
         ) : (
           <ul className="flex flex-col gap-3">
@@ -52,13 +56,13 @@ export default function TestListScreen({
                     <StatusPill status={e.status} />
                   </div>
                   <p className="text-sm font-medium text-text1">
-                    {new Date(e.planned_date).toLocaleDateString('es-CL', {
+                    {new Date(e.planned_date).toLocaleDateString(dateLocale, {
                       day: '2-digit', month: 'long', year: 'numeric',
                     })}
                   </p>
                   <div className="flex items-center justify-between text-xs text-muted">
-                    <span>Resultado: {e.result}</span>
-                    <span>{e.answers.length} ítems</span>
+                    <span>{t('testList.result')}{e.result}</span>
+                    <span>{e.answers.length} {t('testList.items')}</span>
                   </div>
                 </button>
               </li>

@@ -5,6 +5,7 @@ import NoAccessScreen from './screens/NoAccessScreen'
 import './index.css'
 import keycloak from './auth/keycloak'
 import { AuthContext, type AuthContextValue, type AppRole, APP_ROLES } from './auth/AuthContext'
+import { LanguageProvider } from './i18n'
 
 const CLIENT_ID = (import.meta.env.VITE_KEYCLOAK_CLIENT_ID as string | undefined) ?? 'xpid-execute'
 const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? ''
@@ -75,13 +76,15 @@ function mount(authValue: AuthContextValue | null, hasAccess: boolean) {
 
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
-      {hasAccess && authValue ? (
-        <AuthContext.Provider value={authValue}>
-          <App />
-        </AuthContext.Provider>
-      ) : (
-        <NoAccessScreen onLogout={logout} />
-      )}
+      <LanguageProvider>
+        {hasAccess && authValue ? (
+          <AuthContext.Provider value={authValue}>
+            <App />
+          </AuthContext.Provider>
+        ) : (
+          <NoAccessScreen onLogout={logout} />
+        )}
+      </LanguageProvider>
     </React.StrictMode>,
   )
 }

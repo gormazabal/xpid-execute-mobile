@@ -3,6 +3,7 @@ import { executionsApi, ncrApi, protocolsApi, punchListApi } from '../api'
 import type { ProtocolChecklistItem, TestExecution, TestExecutionAnswer, TestProtocol } from '../types/domain'
 import TopBar from '../components/TopBar'
 import StatusPill from '../components/StatusPill'
+import { useLanguage } from '../i18n'
 
 function computeAutoStatus(
   pairs: Array<{ answer: TestExecutionAnswer; item: ProtocolChecklistItem }>,
@@ -32,11 +33,14 @@ export default function ExecutionScreen({
   onUpdated: (updated: TestExecution) => void
   onClose: () => void
 }) {
+  const { t, lang } = useLanguage()
   const [protocols, setProtocols] = useState<TestProtocol[]>([])
   const [loadingProtocols, setLoadingProtocols] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [createdRecord, setCreatedRecord] = useState<{ type: 'NCR' | 'PUNCH'; code: string } | null>(null)
+
+  const dateLocale = lang === 'en' ? 'en-US' : 'es-CL'
 
   useEffect(() => {
     setLoadingProtocols(true)
@@ -73,18 +77,13 @@ export default function ExecutionScreen({
             execution_id: execution.execution_id,
             protocol_id: protocol.protocol_id,
             item_id: String(item.item_id),
-            pass_fail: null,
-            numeric_value: null,
-            text_value: null,
-            notes: null,
-            answered_by: null,
-            answered_at: null,
+            pass_fail: null, numeric_value: null, text_value: null,
+            notes: null, answered_by: null, answered_at: null,
           },
         })),
     })), [protocols, execution.answers])
 
   const allPairs = answersByProtocol.flatMap((g) => g.pairs)
-
   const answered = allPairs.filter(({ answer }) => answer.answered_at !== null).length
   const total = allPairs.length
   const progress = total > 0 ? Math.round((answered / total) * 100) : 0
@@ -101,7 +100,6 @@ export default function ExecutionScreen({
     setSaving(answer.answer_id)
     setError(null)
     try {
-      // If FAIL: create NCR or Punch List first — if this fails, abort without saving the answer
       if (patch.pass_fail === false && issueData) {
         const base = {
           asset_id: execution.asset_id ?? undefined,
@@ -146,9 +144,7 @@ export default function ExecutionScreen({
         onUpdated(updated)
       }
     } catch {
-      setError(item.is_mandatory
-        ? 'Error al crear NCR. Respuesta no guardada.'
-        : 'Error al crear Punch List. Respuesta no guardada.')
+      setError(item.is_mandatory ? t('checklist.errorNcr') : t('checklist.errorPunch'))
     } finally {
       setSaving(null)
     }
@@ -156,7 +152,6 @@ export default function ExecutionScreen({
 
   const EDITABLE_STATUSES = new Set(['READY', 'IN_PROGRESS', 'RETEST_REQUIRED'])
   const isEditable = EDITABLE_STATUSES.has(execution.status)
-
   const isIST = execution.test_type === 'IST'
   const istProtocolTitle = protocols.find((p) => p.protocol_id === execution.ist_protocol_id)?.title
 
@@ -170,33 +165,29 @@ export default function ExecutionScreen({
       {/* Info header */}
       <div className="shrink-0 bg-surface1 border-b border-border1 px-4 py-3">
         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-          <span className="text-muted">Tipo</span>
+          <span className="text-muted">{t('execution.type')}</span>
           <span className="text-text2">{execution.test_type}</span>
           {!isIST && execution.domain_id && (
             <>
-              <span className="text-muted">Dominio</span>
+              <span className="text-muted">{t('execution.domain')}</span>
               <span className="text-text2">{execution.domain_id}</span>
             </>
           )}
-          <span className="text-muted">Fecha planificada</span>
+          <span className="text-muted">{t('execution.plannedDate')}</span>
           <span className="text-text2">
-            {new Date(execution.planned_date).toLocaleDateString('es-CL')}
+            {new Date(execution.planned_date).toLocaleDateString(dateLocale)}
           </span>
-          <span className="text-muted">Estado</span>
+          <span className="text-muted">{t('execution.status')}</span>
           <StatusPill status={execution.status} />
-          <span className="text-muted">Progreso</span>
-          <span className="text-text2">{answered}/{total} ítems</span>
+          <span className="text-muted">{t('execution.progress')}</span>
+          <span className="text-text2">{answered}/{total} {t('execution.items')}</span>
         </div>
 
         {total > 0 && (
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-border1">
-            <div
-              className="h-full rounded-full bg-accent transition-all"
-              style={{ width: `${progress}%` }}
-            />
+            <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${progress}%` }} />
           </div>
         )}
-
 
         {error && <p className="mt-2 text-xs text-rose-soft">{error}</p>}
         {createdRecord && (
@@ -205,7 +196,7 @@ export default function ExecutionScreen({
               <span className={`font-semibold ${createdRecord.type === 'NCR' ? 'text-rose-soft' : 'text-amber'}`}>
                 {createdRecord.type === 'NCR' ? 'NCR' : 'Punch List'}
               </span>{' '}
-              creado: <span className="font-mono">{createdRecord.code}</span>
+              {t('execution.created')} <span className="font-mono">{createdRecord.code}</span>
             </p>
             <button onClick={() => setCreatedRecord(null)} className="ml-2 text-faint text-xs">✕</button>
           </div>
@@ -215,26 +206,21 @@ export default function ExecutionScreen({
       {/* Checklist */}
       <div className="flex-1 overflow-y-auto">
         {loadingProtocols ? (
-          <p className="pt-8 text-center text-sm text-muted">Cargando checklist…</p>
+          <p className="pt-8 text-center text-sm text-muted">{t('execution.loadingChecklist')}</p>
         ) : answersByProtocol.length === 0 ? (
           <div className="mx-4 mt-4 rounded-xl border border-amber/20 bg-amber/5 px-4 py-3">
-            <p className="text-sm font-medium text-amber">Sin protocolo disponible</p>
-            <p className="mt-0.5 text-xs text-muted">
-              Esta prueba fue creada sin protocolo asignado.
-            </p>
+            <p className="text-sm font-medium text-amber">{t('execution.noProtocol')}</p>
+            <p className="mt-0.5 text-xs text-muted">{t('execution.noProtocolMsg')}</p>
           </div>
         ) : (
           answersByProtocol.map(({ protocol, pairs }) => (
             <div key={protocol.protocol_id}>
-              {/* Protocol title */}
               <div className="sticky top-0 z-10 bg-bg/95 px-4 py-2 backdrop-blur">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-faint">
                   {protocol.title}
                   <span className="ml-2 font-normal normal-case text-muted/60">({protocol.revision})</span>
                 </p>
               </div>
-
-              {/* Items */}
               <div className="flex flex-col gap-2 px-4 pb-2">
                 {pairs.map(({ item, answer }) => (
                   <ChecklistCard
@@ -250,7 +236,6 @@ export default function ExecutionScreen({
             </div>
           ))
         )}
-        {/* Bottom padding for safe area */}
         <div className="h-8" />
       </div>
     </div>
@@ -269,40 +254,22 @@ const NCR_SEVERITIES = ['CRITICAL', 'MAJOR', 'MINOR', 'OBSERVATION'] as const
 const PUNCH_TYPES = ['A_PUNCH', 'B_PUNCH', 'C_PUNCH'] as const
 
 function ChecklistCard({
-  item,
-  answer,
-  saving,
-  editable,
-  onUpdate,
+  item, answer, saving, editable, onUpdate,
 }: {
   item: ProtocolChecklistItem
   answer: TestExecutionAnswer
   saving: boolean
   editable: boolean
-  onUpdate: (
-    patch: PendingPatch,
-    notes?: string,
-    file?: File,
-    issueData?: { description: string; severity?: string; punch_type?: string },
-  ) => void
+  onUpdate: (patch: PendingPatch, notes?: string, file?: File, issueData?: { description: string; severity?: string; punch_type?: string }) => void
 }) {
+  const { t } = useLanguage()
   const [numericInput, setNumericInput] = useState(answer.numeric_value?.toString() ?? '')
   const [textInput, setTextInput]       = useState(answer.text_value ?? '')
-
-  // State machine stages (only one active at a time):
-  // null           → normal input controls
-  // 'pass-fail'    → NUMERIC/TEXT: ask user PASS or FAIL
-  // 'confirm'      → show result + evidence picker (for PASS)
-  // 'issue-form'   → NCR / Punch List form (for FAIL)
   const [stage, setStage] = useState<'pass-fail' | 'confirm' | 'issue-form' | null>(null)
   const [pending, setPending] = useState<PendingPatch>({})
-
-  // Issue form fields
   const [issueDesc,      setIssueDesc]      = useState('')
   const [issueSeverity,  setIssueSeverity]  = useState<string>('MINOR')
   const [issuePunchType, setIssuePunchType] = useState<string>('B_PUNCH')
-
-  // Evidence (PASS + evidence_required)
   const [evidenceFile, setEvidenceFile] = useState<File | null>(null)
   const [preview,      setPreview]      = useState<string | null>(null)
 
@@ -310,7 +277,6 @@ function ChecklistCard({
   const pf         = answer.pass_fail
   const disabled   = !editable || saving
 
-  // ── helpers ──────────────────────────────────────────────────────────────
   const evaluateNumericPass = (val: number): boolean | null => {
     if (item.min_value === null && item.max_value === null) return null
     const aboveMin = item.min_value === null || val >= item.min_value
@@ -325,93 +291,54 @@ function ChecklistCard({
   }
 
   const resetAll = () => {
-    setStage(null)
-    setPending({})
-    setIssueDesc('')
-    setIssueSeverity('MINOR')
-    setIssuePunchType('B_PUNCH')
-    setEvidenceFile(null)
-    setPreview(null)
+    setStage(null); setPending({}); setIssueDesc('')
+    setIssueSeverity('MINOR'); setIssuePunchType('B_PUNCH')
+    setEvidenceFile(null); setPreview(null)
   }
 
-  const goToIssueForm = (patch: PendingPatch) => {
-    setPending(patch)
-    setIssueDesc('')
-    setStage('issue-form')
-  }
+  const goToIssueForm = (patch: PendingPatch) => { setPending(patch); setIssueDesc(''); setStage('issue-form') }
+  const goToConfirm   = (patch: PendingPatch) => { setPending(patch); setEvidenceFile(null); setPreview(null); setStage('confirm') }
 
-  const goToConfirm = (patch: PendingPatch) => {
-    setPending(patch)
-    setEvidenceFile(null)
-    setPreview(null)
-    setStage('confirm')
-  }
-
-  // ── entry points from input controls ─────────────────────────────────────
-
-  // PASS_FAIL item: direct click
   const handlePassFail = (isPass: boolean) => {
     if (!editable) return
     if (isPass) goToConfirm({ pass_fail: true })
     else        goToIssueForm({ pass_fail: false })
   }
 
-  // NUMERIC: after pressing OK
   const handleNumericOK = () => {
     const val = parseFloat(numericInput)
     if (isNaN(val)) return
     const evalResult = evaluateNumericPass(val)
     if (evalResult !== null) {
-      // Range known — auto-evaluate
       if (evalResult) goToConfirm({ numeric_value: val, pass_fail: true })
       else            goToIssueForm({ numeric_value: val, pass_fail: false })
     } else {
-      // No range — ask user PASS or FAIL
-      setPending({ numeric_value: val })
-      setStage('pass-fail')
+      setPending({ numeric_value: val }); setStage('pass-fail')
     }
   }
 
-  // TEXT: after pressing OK
   const handleTextOK = () => {
     const val = textInput.trim()
     if (!val) return
-    setPending({ text_value: val })
-    setStage('pass-fail')
+    setPending({ text_value: val }); setStage('pass-fail')
   }
 
-  // ── stage transitions ──────────────────────────────────────────────────
-
-  // 'pass-fail' stage: user picks PASS or FAIL
   const choosePassFail = (isPass: boolean) => {
     const patch = { ...pending, pass_fail: isPass }
     if (isPass) goToConfirm(patch)
     else        goToIssueForm(patch)
   }
 
-  // 'confirm' stage: user confirms PASS
-  const confirmPass = () => {
-    onUpdate(pending, undefined, evidenceFile ?? undefined)
-    resetAll()
-  }
+  const confirmPass = () => { onUpdate(pending, undefined, evidenceFile ?? undefined); resetAll() }
 
-  // 'issue-form' stage: user submits NCR/Punch
   const confirmIssue = () => {
     if (!issueDesc.trim()) return
-    onUpdate(pending, undefined, undefined, {
-      description:  issueDesc.trim(),
-      severity:     issueSeverity,
-      punch_type:   issuePunchType,
-    })
+    onUpdate(pending, undefined, undefined, { description: issueDesc.trim(), severity: issueSeverity, punch_type: issuePunchType })
     resetAll()
   }
 
-  // ── derived ──────────────────────────────────────────────────────────────
-  const evidenceRequired  = item.evidence_required
-  const canConfirmPass    = !evidenceRequired || evidenceFile !== null
-
-  const pendingIsPass = pending.pass_fail === true
-  const pendingIsFail = pending.pass_fail === false
+  const evidenceRequired = item.evidence_required
+  const canConfirmPass   = !evidenceRequired || evidenceFile !== null
   const valueLabel = pending.numeric_value != null
     ? `${pending.numeric_value} ${item.unit ?? ''}`.trim()
     : pending.text_value ?? ''
@@ -425,40 +352,32 @@ function ChecklistCard({
     : editable ? 'bg-surface2 border-border1 text-muted active:bg-rose/10'
     : 'bg-surface2 border-border1 text-muted/40'
 
-  // ── render ────────────────────────────────────────────────────────────────
   return (
     <div className={`rounded-xl border px-4 py-3 ${isAnswered && stage === null ? 'border-border1' : 'border-border1/60'} bg-surface1 ${!editable ? 'opacity-75' : ''}`}>
-
       {/* Header */}
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-text1 leading-snug">{item.description}</p>
-          {item.section_name  && <p className="mt-0.5 text-xs text-faint">{item.section_name}</p>}
-          {item.expected_result && <p className="mt-0.5 text-xs text-muted">Esperado: {item.expected_result}</p>}
+          {item.section_name   && <p className="mt-0.5 text-xs text-faint">{item.section_name}</p>}
+          {item.expected_result && <p className="mt-0.5 text-xs text-muted">{t('checklist.expected')} {item.expected_result}</p>}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
-          {item.is_mandatory && (
-            <span className="rounded bg-rose/10 px-1.5 py-0.5 text-[10px] font-semibold text-rose-soft">OBLIGATORIO</span>
-          )}
-          {item.evidence_required && (
-            <span className="rounded bg-amber/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber">EVIDENCIA</span>
-          )}
+          {item.is_mandatory    && <span className="rounded bg-rose/10 px-1.5 py-0.5 text-[10px] font-semibold text-rose-soft">{t('checklist.mandatory')}</span>}
+          {item.evidence_required && <span className="rounded bg-amber/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber">{t('checklist.evidence')}</span>}
         </div>
       </div>
 
-      {/* ── Stage: NCR / Punch List form ── */}
+      {/* Issue form */}
       {stage === 'issue-form' && (
         <div className="rounded-lg border border-rose/30 bg-rose/5 px-3 py-3 mb-2">
           <p className="text-[11px] font-semibold text-rose-soft mb-2">
-            {item.is_mandatory ? 'Registrar NCR' : 'Registrar Punch List'}
+            {item.is_mandatory ? t('checklist.registerNcr') : t('checklist.registerPunch')}
           </p>
-          {valueLabel && (
-            <p className="text-xs text-muted mb-2">Valor registrado: <span className="font-medium text-text2">{valueLabel}</span></p>
-          )}
+          {valueLabel && <p className="text-xs text-muted mb-2">{t('checklist.recordedValue')} <span className="font-medium text-text2">{valueLabel}</span></p>}
 
           {item.is_mandatory ? (
             <div className="mb-3">
-              <label className="mb-1 block text-[11px] text-muted uppercase tracking-wide">Severidad</label>
+              <label className="mb-1 block text-[11px] text-muted uppercase tracking-wide">{t('checklist.severity')}</label>
               <select value={issueSeverity} onChange={(e) => setIssueSeverity(e.target.value)}
                 className="w-full rounded-lg bg-surface2 border border-border1 px-3 py-2 text-sm text-text1 outline-none focus:border-accent">
                 {NCR_SEVERITIES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -466,18 +385,18 @@ function ChecklistCard({
             </div>
           ) : (
             <div className="mb-3">
-              <label className="mb-1 block text-[11px] text-muted uppercase tracking-wide">Tipo</label>
+              <label className="mb-1 block text-[11px] text-muted uppercase tracking-wide">{t('checklist.type')}</label>
               <select value={issuePunchType} onChange={(e) => setIssuePunchType(e.target.value)}
                 className="w-full rounded-lg bg-surface2 border border-border1 px-3 py-2 text-sm text-text1 outline-none focus:border-accent">
-                {PUNCH_TYPES.map((t) => <option key={t} value={t}>{t.replace('_', ' ')}</option>)}
+                {PUNCH_TYPES.map((tp) => <option key={tp} value={tp}>{tp.replace('_', ' ')}</option>)}
               </select>
             </div>
           )}
 
           <div className="mb-3">
-            <label className="mb-1 block text-[11px] text-muted uppercase tracking-wide">Descripción *</label>
+            <label className="mb-1 block text-[11px] text-muted uppercase tracking-wide">{t('checklist.description')}</label>
             <textarea value={issueDesc} onChange={(e) => setIssueDesc(e.target.value)} rows={3}
-              placeholder={item.is_mandatory ? 'Descripción de la no conformidad…' : 'Descripción del punch list…'}
+              placeholder={item.is_mandatory ? t('checklist.ncrPlaceholder') : t('checklist.punchPlaceholder')}
               className="w-full rounded-lg bg-surface2 border border-border1 px-3 py-2 text-sm text-text1 placeholder:text-faint outline-none focus:border-accent resize-none"
             />
           </div>
@@ -485,22 +404,22 @@ function ChecklistCard({
           <div className="flex gap-2">
             <button disabled={saving || !issueDesc.trim()} onClick={confirmIssue}
               className="flex-1 rounded-lg bg-rose/20 border border-rose/30 py-2 text-sm font-semibold text-rose-soft disabled:opacity-40 active:bg-rose/30">
-              {saving ? 'Guardando…' : item.is_mandatory ? 'Registrar NCR' : 'Registrar Punch List'}
+              {saving ? t('checklist.saving') : item.is_mandatory ? t('checklist.registerNcr') : t('checklist.registerPunch')}
             </button>
             <button disabled={saving} onClick={resetAll}
               className="rounded-lg bg-surface2 border border-border1 px-4 py-2 text-sm text-muted active:bg-surface2/80">
-              Cancelar
+              {t('checklist.cancel')}
             </button>
           </div>
         </div>
       )}
 
-      {/* ── Stage: PASS / FAIL choice (for NUMERIC/TEXT without range) ── */}
+      {/* Pass/Fail choice */}
       {stage === 'pass-fail' && (
         <div className="rounded-lg border border-accent/30 bg-accent/5 px-3 py-3 mb-2">
-          <p className="text-xs text-muted mb-1">Valor registrado:</p>
+          <p className="text-xs text-muted mb-1">{t('checklist.recordedValue')}</p>
           <p className="text-base font-bold text-accent mb-3">{valueLabel}</p>
-          <p className="text-[11px] text-muted mb-2">¿El resultado es conforme?</p>
+          <p className="text-[11px] text-muted mb-2">{t('checklist.isConform')}</p>
           <div className="flex gap-2">
             <button disabled={disabled} onClick={() => choosePassFail(true)}
               className="flex-1 rounded-lg border border-emerald/50 bg-emerald/10 py-2.5 text-sm font-semibold text-emerald active:bg-emerald/20 disabled:opacity-50">
@@ -513,22 +432,20 @@ function ChecklistCard({
           </div>
           <button disabled={disabled} onClick={resetAll}
             className="mt-2 w-full rounded-lg bg-surface2 border border-border1 py-1.5 text-xs text-muted active:bg-surface2/80">
-            Cancelar
+            {t('checklist.cancel')}
           </button>
         </div>
       )}
 
-      {/* ── Stage: confirm PASS (+ optional evidence) ── */}
+      {/* Confirm PASS */}
       {stage === 'confirm' && (
         <div className="rounded-lg border border-emerald/30 bg-emerald/5 px-3 py-3 mb-2">
-          <p className="text-xs text-muted mb-1">Confirmando resultado:</p>
-          <p className="text-base font-bold text-emerald mb-2">
-            PASS{valueLabel ? ` – ${valueLabel}` : ''}
-          </p>
+          <p className="text-xs text-muted mb-1">{t('checklist.confirmingResult')}</p>
+          <p className="text-base font-bold text-emerald mb-2">PASS{valueLabel ? ` – ${valueLabel}` : ''}</p>
 
           {evidenceRequired && (
             <div className="mb-3">
-              <label className="mb-1 block text-[11px] font-semibold text-amber">Evidencia requerida *</label>
+              <label className="mb-1 block text-[11px] font-semibold text-amber">{t('checklist.evidenceRequired')}</label>
               {preview && <img src={preview} alt="preview" className="mb-2 w-full rounded-lg object-cover max-h-40 border border-border1" />}
               {evidenceFile && !preview && (
                 <div className="mb-2 flex items-center gap-2 rounded-lg bg-surface2 border border-border1 px-3 py-2">
@@ -538,11 +455,11 @@ function ChecklistCard({
               )}
               <div className="flex gap-2">
                 <label className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-amber/30 bg-amber/10 py-2 text-xs font-semibold text-amber active:bg-amber/20">
-                  <span>📷 Cámara</span>
+                  <span>{t('checklist.camera')}</span>
                   <input type="file" accept="image/*" capture="environment" className="sr-only" onChange={handleFileChange} />
                 </label>
                 <label className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-border1 bg-surface2 py-2 text-xs font-semibold text-muted active:bg-surface2/80">
-                  <span>📁 Archivo</span>
+                  <span>{t('checklist.file')}</span>
                   <input type="file" accept="image/*,application/pdf" className="sr-only" onChange={handleFileChange} />
                 </label>
               </div>
@@ -552,17 +469,17 @@ function ChecklistCard({
           <div className="flex gap-2">
             <button disabled={saving || !canConfirmPass} onClick={confirmPass}
               className="flex-1 rounded-lg bg-emerald/20 border border-emerald/30 py-2 text-sm font-semibold text-emerald disabled:opacity-40 active:bg-emerald/30">
-              {saving ? 'Guardando…' : 'Confirmar PASS'}
+              {saving ? t('checklist.saving') : t('checklist.confirmPass')}
             </button>
             <button disabled={saving} onClick={resetAll}
               className="rounded-lg bg-surface2 border border-border1 px-4 py-2 text-sm text-muted active:bg-surface2/80">
-              Cancelar
+              {t('checklist.cancel')}
             </button>
           </div>
         </div>
       )}
 
-      {/* ── Normal input controls (stage === null) ── */}
+      {/* Normal input controls */}
       {stage === null && (
         <>
           {item.input_type === 'PASS_FAIL' && (
@@ -592,7 +509,7 @@ function ChecklistCard({
                 </button>
               </div>
               {(item.min_value !== null || item.max_value !== null) && (
-                <p className="mt-1 text-[10px] text-faint">Rango: {item.min_value ?? '—'} – {item.max_value ?? '—'} {item.unit ?? ''}</p>
+                <p className="mt-1 text-[10px] text-faint">{t('checklist.range')} {item.min_value ?? '—'} – {item.max_value ?? '—'} {item.unit ?? ''}</p>
               )}
             </>
           )}
@@ -601,7 +518,7 @@ function ChecklistCard({
             <div className="flex flex-col gap-2">
               <textarea value={textInput} onChange={(e) => editable && setTextInput(e.target.value)}
                 readOnly={!editable} rows={2}
-                placeholder={editable ? 'Ingresa el resultado…' : ''}
+                placeholder={editable ? t('checklist.textPlaceholder') : ''}
                 className={`w-full rounded-lg bg-surface2 border border-border1 px-3 py-2 text-sm text-text1 placeholder:text-faint outline-none resize-none ${editable ? 'focus:border-accent' : 'cursor-default'}`}
               />
               {editable && (
@@ -614,7 +531,7 @@ function ChecklistCard({
           )}
 
           {item.input_type === 'PHOTO' && (
-            <p className="text-xs text-muted italic">Evidencia fotográfica — usar la aplicación de escritorio.</p>
+            <p className="text-xs text-muted italic">{t('checklist.photoNote')}</p>
           )}
         </>
       )}

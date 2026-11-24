@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { assetsApi, executionsApi } from '../api'
 import type { Asset } from '../types/domain'
 import TopBar from '../components/TopBar'
+import { useLanguage } from '../i18n'
 
 export default function AssetScreen({
   testType,
@@ -12,6 +13,7 @@ export default function AssetScreen({
   onBack: () => void
   onSelect: (asset: Asset) => void
 }) {
+  const { t, lang } = useLanguage()
   const [assets, setAssets] = useState<Asset[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
@@ -28,10 +30,10 @@ export default function AssetScreen({
         )
         const filtered = allAssets
           .filter((a) => assetIdsWithTests.has(a.asset_id))
-          .sort((x, y) => x.asset_name.localeCompare(y.asset_name, 'es'))
+          .sort((x, y) => x.asset_name.localeCompare(y.asset_name, lang))
         setAssets(filtered)
       })
-      .catch(() => setError('No se pudo cargar la lista de activos.'))
+      .catch(() => setError(t('asset.error')))
       .finally(() => setLoading(false))
   }, [testType])
 
@@ -42,12 +44,12 @@ export default function AssetScreen({
 
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
-      <TopBar title={`${testType} – Selecciona activo`} onBack={onBack} />
+      <TopBar title={t('asset.topBarTitle', { testType })} onBack={onBack} />
 
       <div className="px-4 pt-3 pb-2">
         <input
           type="search"
-          placeholder="Buscar activo…"
+          placeholder={t('asset.search')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full rounded-xl bg-surface1 px-4 py-3 text-sm text-text1 placeholder:text-faint outline-none border border-border1 focus:border-accent"
@@ -56,11 +58,11 @@ export default function AssetScreen({
 
       <div className="flex-1 overflow-y-auto px-4 pb-6">
         {loading ? (
-          <p className="pt-8 text-center text-sm text-muted">Cargando activos…</p>
+          <p className="pt-8 text-center text-sm text-muted">{t('asset.loading')}</p>
         ) : error ? (
           <p className="pt-8 text-center text-sm text-rose-soft">{error}</p>
         ) : filtered.length === 0 ? (
-          <p className="pt-8 text-center text-sm text-muted">Sin resultados.</p>
+          <p className="pt-8 text-center text-sm text-muted">{t('asset.noResults')}</p>
         ) : (
           <ul className="flex flex-col gap-2 pt-1">
             {filtered.map((a) => (

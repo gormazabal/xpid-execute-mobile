@@ -1,4 +1,5 @@
 import { useAuth } from '../auth/AuthContext'
+import { useLanguage, type Lang } from '../i18n'
 
 export default function HomeScreen({
   onFAT,
@@ -10,6 +11,7 @@ export default function HomeScreen({
   onIST: () => void
 }) {
   const { logout, fullName, role } = useAuth()
+  const { t, lang, setLang } = useLanguage()
 
   return (
     <div className="flex min-h-dvh flex-col bg-bg px-5 pt-safe-top pb-safe-bottom">
@@ -19,70 +21,65 @@ export default function HomeScreen({
           <span className="text-[12px] font-medium text-text2 truncate">{fullName}</span>
           {role && <span className="text-[10px] text-faint capitalize">{role}</span>}
         </div>
-        <button
-          onClick={logout}
-          className="ml-3 shrink-0 rounded-lg border border-border1 px-3 py-1.5 text-[11px] text-text3 transition-colors active:bg-surface2"
-        >
-          Cerrar sesión
-        </button>
+        <div className="flex items-center gap-2 ml-3 shrink-0">
+          <LangToggle lang={lang} setLang={setLang} />
+          <button
+            onClick={logout}
+            className="rounded-lg border border-border1 px-3 py-1.5 text-[11px] text-text3 transition-colors active:bg-surface2"
+          >
+            {t('home.logout')}
+          </button>
+        </div>
       </div>
 
       {/* Header */}
       <div className="pt-10 pb-8 text-center">
         <p className="text-[11px] font-semibold uppercase tracking-widest text-faint">xPID Execute</p>
-        <h1 className="mt-1 text-2xl font-bold text-text1">Control de Pruebas</h1>
-        <p className="mt-1 text-sm text-muted">Selecciona el tipo de prueba</p>
+        <h1 className="mt-1 text-2xl font-bold text-text1">{t('home.title')}</h1>
+        <p className="mt-1 text-sm text-muted">{t('home.subtitle')}</p>
       </div>
 
       {/* Type buttons */}
       <div className="flex flex-col gap-4">
-        <TypeButton
-          label="FAT"
-          sublabel="Factory Acceptance Test"
+        <TypeButton label="FAT" sublabel={t('home.fat')}
           color="bg-blue/10 border-accent/30 active:bg-blue/20"
-          badge="bg-accent/20 text-accent"
-          onClick={onFAT}
-        />
-        <TypeButton
-          label="SAT"
-          sublabel="Site Acceptance Test"
+          badge="bg-accent/20 text-accent" onClick={onFAT} />
+        <TypeButton label="SAT" sublabel={t('home.sat')}
           color="bg-emerald/10 border-emerald/30 active:bg-emerald/20"
-          badge="bg-emerald/20 text-emerald"
-          onClick={onSAT}
-        />
-        <TypeButton
-          label="IST"
-          sublabel="Integration System Test"
+          badge="bg-emerald/20 text-emerald" onClick={onSAT} />
+        <TypeButton label="IST" sublabel={t('home.ist')}
           color="bg-amber/10 border-amber/30 active:bg-amber/20"
-          badge="bg-amber/20 text-amber"
-          onClick={onIST}
-        />
+          badge="bg-amber/20 text-amber" onClick={onIST} />
       </div>
     </div>
   )
 }
 
-function TypeButton({
-  label,
-  sublabel,
-  color,
-  badge,
-  onClick,
-}: {
-  label: string
-  sublabel: string
-  color: string
-  badge: string
-  onClick: () => void
+function LangToggle({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }) {
+  return (
+    <div className="flex rounded-lg border border-border1 overflow-hidden text-[11px] font-semibold">
+      {(['es', 'en'] as Lang[]).map((l) => (
+        <button
+          key={l}
+          onClick={() => setLang(l)}
+          className={`px-2.5 py-1.5 transition-colors ${
+            lang === l ? 'bg-accent/20 text-accent' : 'text-text3 active:bg-surface2'
+          }`}
+        >
+          {l.toUpperCase()}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function TypeButton({ label, sublabel, color, badge, onClick }: {
+  label: string; sublabel: string; color: string; badge: string; onClick: () => void
 }) {
   return (
-    <button
-      onClick={onClick}
-      className={`flex w-full items-center gap-4 rounded-2xl border px-5 py-5 text-left transition-colors ${color}`}
-    >
-      <span className={`shrink-0 rounded-xl px-3 py-1.5 font-mono text-sm font-bold ${badge}`}>
-        {label}
-      </span>
+    <button onClick={onClick}
+      className={`flex w-full items-center gap-4 rounded-2xl border px-5 py-5 text-left transition-colors ${color}`}>
+      <span className={`shrink-0 rounded-xl px-3 py-1.5 font-mono text-sm font-bold ${badge}`}>{label}</span>
       <div>
         <p className="font-semibold text-text1">{label}</p>
         <p className="text-sm text-muted">{sublabel}</p>
