@@ -4,6 +4,11 @@ import { en } from './en'
 
 export type Lang = 'es' | 'en'
 
+export const AVAILABLE_LANGS: { code: Lang; label: string }[] = [
+  { code: 'es', label: 'Español' },
+  { code: 'en', label: 'English' },
+]
+
 type TranslationTree = typeof es
 const TRANSLATIONS: Record<Lang, TranslationTree> = { es, en }
 const STORAGE_KEY = 'xpid_mobile_lang'
