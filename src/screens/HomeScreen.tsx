@@ -13,20 +13,22 @@ export default function HomeScreen({
 
   return (
     <div className="flex min-h-dvh flex-col bg-bg px-5 pt-safe-top pb-safe-bottom">
+      {/* TopBar */}
+      <div className="flex items-center justify-between border-b border-border1 bg-surface1 -mx-5 px-5 py-3">
+        <span className="text-[12px] font-medium text-text2 truncate">{fullName}</span>
+        <button
+          onClick={logout}
+          className="ml-3 shrink-0 rounded-lg border border-border1 px-3 py-1.5 text-[11px] text-text3 transition-colors active:bg-surface2"
+        >
+          Cerrar sesión
+        </button>
+      </div>
+
       {/* Header */}
       <div className="pt-10 pb-8 text-center">
         <p className="text-[11px] font-semibold uppercase tracking-widest text-faint">xPID Execute</p>
         <h1 className="mt-1 text-2xl font-bold text-text1">Control de Pruebas</h1>
         <p className="mt-1 text-sm text-muted">Selecciona el tipo de prueba</p>
-        {fullName && (
-          <p className="mt-3 text-[12px] text-faint">{fullName}</p>
-        )}
-        <button
-          onClick={logout}
-          className="mt-2 text-[11px] text-faint underline-offset-2 hover:text-muted hover:underline"
-        >
-          Cerrar sesión
-        </button>
       </div>
 
       {/* Type buttons */}
