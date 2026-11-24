@@ -1,0 +1,68 @@
+import { useEffect, useState } from 'react'
+import { executionsApi } from '../api'
+import type { TestExecution } from '../types/domain'
+import TopBar from '../components/TopBar'
+import StatusPill from '../components/StatusPill'
+
+export default function ISTListScreen({
+  onBack,
+  onSelect,
+}: {
+  onBack: () => void
+  onSelect: (e: TestExecution) => void
+}) {
+  const [executions, setExecutions] = useState<TestExecution[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    executionsApi.list({ test_type: 'IST' })
+      .then(setExecutions)
+      .catch(() => setError('No se pudo cargar las pruebas IST.'))
+      .finally(() => setLoading(false))
+  }, [])
+
+  return (
+    <div className="flex min-h-dvh flex-col bg-bg">
+      <TopBar title="IST – Pruebas programadas" onBack={onBack} />
+
+      <div className="flex-1 overflow-y-auto px-4 py-4 pb-6">
+        {loading ? (
+          <p className="pt-8 text-center text-sm text-muted">Cargando pruebas IST…</p>
+        ) : error ? (
+          <p className="pt-8 text-center text-sm text-rose-soft">{error}</p>
+        ) : executions.length === 0 ? (
+          <p className="pt-8 text-center text-sm text-muted">No hay pruebas IST programadas.</p>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {executions.map((e) => (
+              <li key={e.execution_id}>
+                <button
+                  onClick={() => onSelect(e)}
+                  className="flex w-full flex-col gap-2 rounded-xl bg-surface1 border border-border1 px-4 py-4 text-left active:bg-surface2 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-xs font-semibold text-amber">IST</span>
+                    <StatusPill status={e.status} />
+                  </div>
+                  {e.ist_protocol_id && (
+                    <p className="text-sm font-medium text-text1">{e.ist_protocol_id}</p>
+                  )}
+                  <p className="text-xs text-muted">
+                    {new Date(e.planned_date).toLocaleDateString('es-CL', {
+                      day: '2-digit', month: 'long', year: 'numeric',
+                    })}
+                  </p>
+                  <div className="flex items-center justify-between text-xs text-muted">
+                    <span>Resultado: {e.result}</span>
+                    <span>{e.answers.length} ítems</span>
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  )
+}
