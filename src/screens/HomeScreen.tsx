@@ -1,3 +1,5 @@
+import { useAuth } from '../auth/AuthContext'
+
 export default function HomeScreen({
   onFAT,
   onSAT,
@@ -7,6 +9,8 @@ export default function HomeScreen({
   onSAT: () => void
   onIST: () => void
 }) {
+  const { logout, fullName } = useAuth()
+
   return (
     <div className="flex min-h-dvh flex-col bg-bg px-5 pt-safe-top pb-safe-bottom">
       {/* Header */}
@@ -14,6 +18,15 @@ export default function HomeScreen({
         <p className="text-[11px] font-semibold uppercase tracking-widest text-faint">xPID Execute</p>
         <h1 className="mt-1 text-2xl font-bold text-text1">Control de Pruebas</h1>
         <p className="mt-1 text-sm text-muted">Selecciona el tipo de prueba</p>
+        {fullName && (
+          <p className="mt-3 text-[12px] text-faint">{fullName}</p>
+        )}
+        <button
+          onClick={logout}
+          className="mt-2 text-[11px] text-faint underline-offset-2 hover:text-muted hover:underline"
+        >
+          Cerrar sesión
+        </button>
       </div>
 
       {/* Type buttons */}
