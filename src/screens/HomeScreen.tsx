@@ -9,13 +9,16 @@ export default function HomeScreen({
   onSAT: () => void
   onIST: () => void
 }) {
-  const { logout, fullName } = useAuth()
+  const { logout, fullName, role } = useAuth()
 
   return (
     <div className="flex min-h-dvh flex-col bg-bg px-5 pt-safe-top pb-safe-bottom">
       {/* TopBar */}
       <div className="flex items-center justify-between border-b border-border1 bg-surface1 -mx-5 px-5 py-3">
-        <span className="text-[12px] font-medium text-text2 truncate">{fullName}</span>
+        <div className="flex flex-col min-w-0">
+          <span className="text-[12px] font-medium text-text2 truncate">{fullName}</span>
+          {role && <span className="text-[10px] text-faint capitalize">{role}</span>}
+        </div>
         <button
           onClick={logout}
           className="ml-3 shrink-0 rounded-lg border border-border1 px-3 py-1.5 text-[11px] text-text3 transition-colors active:bg-surface2"
