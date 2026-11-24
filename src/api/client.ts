@@ -1,9 +1,15 @@
-const BASE = '/api/v1'
+import keycloak from '../auth/keycloak'
+
+const BASE = `${(import.meta.env.VITE_API_URL as string | undefined) ?? ''}/api/v1`
+
+function authHeaders(): Record<string, string> {
+  return keycloak.token ? { Authorization: `Bearer ${keycloak.token}` } : {}
+}
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method,
-    headers: body ? { 'Content-Type': 'application/json' } : {},
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: body ? JSON.stringify(body) : undefined,
   })
   if (!res.ok) {
@@ -17,7 +23,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 async function uploadFile<T>(path: string, file: File): Promise<T> {
   const form = new FormData()
   form.append('file', file)
-  const res = await fetch(`${BASE}${path}`, { method: 'POST', body: form })
+  const res = await fetch(`${BASE}${path}`, { method: 'POST', body: form, headers: authHeaders() })
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText)
     throw new Error(text || `HTTP ${res.status}`)
